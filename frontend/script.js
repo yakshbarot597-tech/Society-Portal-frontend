@@ -1209,12 +1209,21 @@ function getEffectiveMonthData(d, period) {
         }
     }
 
+    const normalizePaymentMethod = (method) => {
+        if (!method) return 'Cash';
+        const ml = method.toLowerCase();
+        if (ml.includes('upi')) return 'UPI';
+        if (ml.includes('bank') || ml.includes('transfer')) return 'Bank Transfer';
+        if (ml.includes('cheque') || ml.includes('check')) return 'Check';
+        return 'Cash';
+    };
+
     let mData = {
         status: existingMonth.status || 'Pending',
         amount: existingMonth.amount || d.latestAmount || 0,
         paidDate: existingMonth.paidDate || '-',
         plan: existingMonth.plan || 'monthly',
-        paymentMethod: existingMonth.paymentMethod || d.latestPaymentMethod || 'Cash',
+        paymentMethod: normalizePaymentMethod(existingMonth.paymentMethod || d.latestPaymentMethod),
         owner: (existingMonth && existingMonth.hasOwnProperty('owner') && existingMonth.owner !== null) ? existingMonth.owner : defaultOwner, // Historical owner if exists, else current/resolved
         phone: defaultPhone,
         isRental: defaultIsRental,
@@ -1240,7 +1249,7 @@ function getEffectiveMonthData(d, period) {
                     amount: m.amount || d.latestAmount || 0,
                     paidDate: m.paidDate,
                     plan: 'yearly',
-                    paymentMethod: m.paymentMethod || 'Cash',
+                    paymentMethod: normalizePaymentMethod(m.paymentMethod),
                     owner: m.owner || mData.owner, // Preserve owner in yearly logic
                     isRental: mData.isRental,
                     rentalName: mData.rentalName,
