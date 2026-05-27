@@ -1645,32 +1645,27 @@ app.post("/api/flat", async (req, res) => {
             invoiceId = invInsert.insertId;
         }
 
-        // Handle payment transaction
-        if (status === 'Paid') {
-            let method = 'cash';
-            if (paymentMethod) {
-                const mLower = paymentMethod.toLowerCase();
-                if (mLower.includes('upi')) method = 'upi';
-                else if (mLower.includes('bank') || mLower.includes('transfer')) method = 'bank_transfer';
-                else if (mLower.includes('card')) method = 'card';
-                else if (mLower.includes('cheque') || mLower.includes('check')) method = 'cheque';
-            }
-
-            await db.promise().query(
-                "DELETE FROM payment_transactions WHERE invoice_id = ?",
-                [invoiceId]
-            );
-            await db.promise().query(
-                `INSERT INTO payment_transactions (invoice_id, payment_method, amount, status, paid_at)
-                 VALUES (?, ?, ?, 'Success', ?)`,
-                [invoiceId, method, amount, finalPaidDate]
-            );
-        } else {
-            await db.promise().query(
-                "DELETE FROM payment_transactions WHERE invoice_id=?",
-                [invoiceId]
-            );
+        // Handle payment transaction (save for both Paid and Pending statuses)
+        let method = 'cash';
+        if (paymentMethod) {
+            const mLower = paymentMethod.toLowerCase();
+            if (mLower.includes('upi')) method = 'upi';
+            else if (mLower.includes('bank') || mLower.includes('transfer')) method = 'bank_transfer';
+            else if (mLower.includes('card')) method = 'card';
+            else if (mLower.includes('cheque') || mLower.includes('check')) method = 'cheque';
         }
+
+        const txStatus = status === 'Paid' ? 'Success' : 'Pending';
+
+        await db.promise().query(
+            "DELETE FROM payment_transactions WHERE invoice_id = ?",
+            [invoiceId]
+        );
+        await db.promise().query(
+            `INSERT INTO payment_transactions (invoice_id, payment_method, amount, status, paid_at)
+             VALUES (?, ?, ?, ?, ?)`,
+            [invoiceId, method, amount, txStatus, finalPaidDate]
+        );
 
         const editYear = billingYear;
 
